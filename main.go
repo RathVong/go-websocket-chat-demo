@@ -4,8 +4,7 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/Sirupsen/logrus"
+    "log"
 	"github.com/heroku/x/redis"
 )
 
