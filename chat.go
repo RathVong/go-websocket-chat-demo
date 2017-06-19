@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-"log"
-"github.com/gorilla/websocket"
+	"log"
+	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
 
@@ -58,14 +58,16 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		mt, data, err := ws.ReadMessage()
     
-        if err != nil {
+        	if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) || err == io.EOF {
 				log.Println("Websocket closed!")
 				break
 			}
-		log.Println("Error reading websocket message")
+		
+			log.Println("Error reading websocket message")
 		}
-		switch mt {
+	
+	switch mt {
 		case websocket.TextMessage:
 			msg, err := validateMessage(data)
 			if err != nil {
