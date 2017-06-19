@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"os"
 	"time"
-    	"log"
-    	"github.com/garyburd/redigo/redis"
+    "log"
+    "github.com/garyburd/redigo/redis"
  	"crypto/tls"
 	
 )
@@ -30,7 +30,7 @@ var redisPool = &redis.Pool{
 
 var (
 	waitTimeout = time.Minute * 10
-    	rr          redisReceiver
+   	rr          redisReceiver
 	rw          redisWriter
 )
 
@@ -48,20 +48,24 @@ func main() {
 	go func() {
 		for {
     		rr.broadcast(availableMessage)
-	            err := rr.run()
+	        err := rr.run()
+			
 			if err == nil {
 				break
 			}
+			
 			log.Println(err)		
         }
 	}()
 
 	go func() {
 		for {
-       		    err := rw.run()
-	   		if err == nil {
+       		err := rw.run()
+	   		
+			if err == nil {
 				break
 			}
+			
 			log.Println(err)
 		}
 	}()
