@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/gorilla/websocket"
+"log"
+"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 )
 
@@ -49,7 +48,7 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		m := "Unable to upgrade to websockets"
-		log.WithField("err", err).Println(m)
+        log.Printf("err: %v msg -> %v", err, m)
 		http.Error(w, m, http.StatusBadRequest)
 		return
 	}
@@ -58,25 +57,25 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		mt, data, err := ws.ReadMessage()
-		l := log.WithFields(logrus.Fields{"mt": mt, "data": data, "err": err})
-		if err != nil {
+    
+        if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseGoingAway) || err == io.EOF {
-				l.Info("Websocket closed!")
+				log.Println("Websocket closed!")
 				break
 			}
-			l.Error("Error reading websocket message")
+		log.Println("Error reading websocket message")
 		}
 		switch mt {
 		case websocket.TextMessage:
 			msg, err := validateMessage(data)
 			if err != nil {
-				l.WithFields(logrus.Fields{"msg": msg, "err": err}).Error("Invalid Message")
+				log.Printf("msg %v err %v msg -> Invalid Message", msg, err)
 				break
 			}
 			rw.publish(data)
 		default:
-			l.Warning("Unknown Message!")
-		}
+		    log.Println("Unknown Message!")
+        }
 	}
 
 	rr.deRegister(ws)

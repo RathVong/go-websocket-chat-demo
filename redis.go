@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/garyburd/redigo/redis"
+    "log"
+    "github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
+    "errors"
 )
 
 const (
@@ -69,30 +68,30 @@ func (rr *redisReceiver) wait(_ time.Time) error {
 // run receives pubsub messages from Redis after establishing a connection.
 // When a valid message is received it is broadcast to all connected websockets
 func (rr *redisReceiver) run() error {
-	l := log.WithField("channel", Channel)
+    log.Println("channel:", Channel)
 	conn := rr.pool.Get()
 	defer conn.Close()
 	psc := redis.PubSubConn{Conn: conn}
 	psc.Subscribe(Channel)
 	go rr.connHandler()
-	for {
+	
+    for {
 		switch v := psc.Receive().(type) {
 		case redis.Message:
-			l.WithField("message", string(v.Data)).Info("Redis Message Received")
-			if _, err := validateMessage(v.Data); err != nil {
-				l.WithField("err", err).Error("Error unmarshalling message from Redis")
+			log.Printf("message: %v info -> Redis Message Received", string(v.Data))
+
+            if _, err := validateMessage(v.Data); err != nil {
+				log.Printf("err: %v msg -> Error unmarshalling message from redis", err)
 				continue
 			}
 			rr.broadcast(v.Data)
 		case redis.Subscription:
-			l.WithFields(logrus.Fields{
-				"kind":  v.Kind,
-				"count": v.Count,
-			}).Println("Redis Subscription Received")
+			log.Printf("kind: %v count: %v msg -> Redis Subscriptiong Received",  v.Kind, v.Count)
 		case error:
-			return errors.Wrap(v, "Error while subscribed to Redis channel")
+			return errors.New("Error while subscribed to Redis channel")
 		default:
-			l.WithField("v", v).Info("Unknown Redis receive during subscription")
+			log.Printf("v: %v msg-> Unknow Redis receive during subscription ", v)
+            
 		}
 	}
 }
@@ -121,11 +120,7 @@ func (rr *redisReceiver) connHandler() {
 		case msg := <-rr.messages:
 			for _, conn := range conns {
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-					log.WithFields(logrus.Fields{
-						"data": msg,
-						"err":  err,
-						"conn": conn,
-					}).Error("Error writting data to connection! Closing and removing Connection")
+					log.Printf("data: %v err: %v conn: %v msg -> Error writing data to connection! Closing and removing connection", msg, err, conn)
 					conns = removeConn(conns, conn)
 				}
 			}
@@ -184,10 +179,10 @@ func (rw *redisWriter) run() error {
 
 func writeToRedis(conn redis.Conn, data []byte) error {
 	if err := conn.Send("PUBLISH", Channel, data); err != nil {
-		return errors.Wrap(err, "Unable to publish message to Redis")
+		return errors.New("Unable to publish message to Redis")
 	}
 	if err := conn.Flush(); err != nil {
-		return errors.Wrap(err, "Unable to flush published message to Redis")
+		return errors.New("Unable to flush published message to Redis")
 	}
 	return nil
 }

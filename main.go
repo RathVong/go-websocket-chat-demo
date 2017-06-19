@@ -5,60 +5,64 @@ import (
 	"os"
 	"time"
     "log"
-	"github.com/heroku/x/redis"
+    "github.com/garyburd/redigo/redis"
+ 	"crypto/tls"
+	
 )
+
+
+var redisPool = &redis.Pool{
+    MaxIdle: 5,
+    MaxActive: 10,
+    Wait: true,
+    IdleTimeout: 10 * time.Second,
+    Dial: func() (conn redis.Conn, err error) {
+      
+        conn, err = redis.DialURL(os.Getenv("REDIS_URL"), redis.DialTLSConfig(&tls.Config{InsecureSkipVerify: true}))
+    
+        if err != nil {
+            panic(err)
+        }
+
+        return 
+    },
+}
 
 var (
 	waitTimeout = time.Minute * 10
-	log         = logrus.WithField("cmd", "go-websocket-chat-demo")
-	rr          redisReceiver
+    rr          redisReceiver
 	rw          redisWriter
 )
 
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.WithField("PORT", port).Fatal("$PORT must be set")
+		log.Printf("PORT : %v  - Error -> Post must be set.", port)
+        
 	}
-
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		log.WithField("REDIS_URL", redisURL).Fatal("$REDIS_URL must be set")
-	}
-	redisPool, err := redis.NewRedisPoolFromURL(redisURL)
-	if err != nil {
-		log.WithField("url", redisURL).Fatal("Unable to create Redis pool")
-	}
-
+    
+    
 	rr = newRedisReceiver(redisPool)
 	rw = newRedisWriter(redisPool)
 
 	go func() {
 		for {
-			waited, err := redis.WaitForAvailability(redisURL, waitTimeout, rr.wait)
-			if !waited || err != nil {
-				log.WithFields(logrus.Fields{"waitTimeout": waitTimeout, "err": err}).Fatal("Redis not available by timeout!")
-			}
-			rr.broadcast(availableMessage)
-			err = rr.run()
+    		rr.broadcast(availableMessage)
+            err := rr.run()
 			if err == nil {
 				break
 			}
-			log.Error(err)
-		}
+			log.Println(err)		
+        }
 	}()
 
 	go func() {
 		for {
-			waited, err := redis.WaitForAvailability(redisURL, waitTimeout, nil)
-			if !waited || err != nil {
-				log.WithFields(logrus.Fields{"waitTimeout": waitTimeout, "err": err}).Fatal("Redis not available by timeout!")
-			}
-			err = rw.run()
+            err := rw.run()
 			if err == nil {
 				break
 			}
-			log.Error(err)
+			log.Println(err)
 		}
 	}()
 
