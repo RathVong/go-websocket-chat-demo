@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-    "log"
-    "github.com/garyburd/redigo/redis"
+   	"log"
+    	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/websocket"
-    "errors"
+	"errors"
 )
 
 const (
@@ -68,7 +68,7 @@ func (rr *redisReceiver) wait(_ time.Time) error {
 // run receives pubsub messages from Redis after establishing a connection.
 // When a valid message is received it is broadcast to all connected websockets
 func (rr *redisReceiver) run() error {
-    log.Println("channel:", Channel)
+    	log.Println("channel:", Channel)
 	conn := rr.pool.Get()
 	defer conn.Close()
 	psc := redis.PubSubConn{Conn: conn}
@@ -76,19 +76,23 @@ func (rr *redisReceiver) run() error {
 	go rr.connHandler()
 	
     for {
-		switch v := psc.Receive().(type) {
+	switch v := psc.Receive().(type) {
 		case redis.Message:
 			log.Printf("message: %v info -> Redis Message Received", string(v.Data))
-
-            if _, err := validateMessage(v.Data); err != nil {
+	        
+			if _, err := validateMessage(v.Data); err != nil {
 				log.Printf("err: %v msg -> Error unmarshalling message from redis", err)
 				continue
 			}
+		
 			rr.broadcast(v.Data)
+		
 		case redis.Subscription:
 			log.Printf("kind: %v count: %v msg -> Redis Subscriptiong Received",  v.Kind, v.Count)
+		
 		case error:
 			return errors.New("Error while subscribed to Redis channel")
+		
 		default:
 			log.Printf("v: %v msg-> Unknow Redis receive during subscription ", v)
             
